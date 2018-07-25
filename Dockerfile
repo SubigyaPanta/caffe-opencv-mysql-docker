@@ -132,6 +132,29 @@ RUN apt-get update && apt-get install -y \
 # 		zmq \
 # 		&& \
 # python -m ipykernel.kernelspec
+# RUN apt-get update && apt-get install -y libopencv-dev
+# Install OpenCV
+# RUN git clone --depth 1 https://github.com/opencv/opencv.git /root/opencv && \
+COPY 3.3.0.zip 3.3.0.zip
+COPY contrib-3.3.0.zip contrib-3.3.0.zip
+# RUN wget https://github.com/opencv/opencv/archive/2.4.13.4.zip && \ 
+RUN unzip 3.3.0.zip && \
+	rm 3.3.0.zip && \
+	unzip contrib-3.3.0.zip && \
+	rm contrib-3.3.0.zip && \
+	mv opencv-3.3.0 /root/opencv && \
+	mv opencv_contrib-3.3.0 /root/opencv_contrib && \
+	cd /root/opencv && \
+	mkdir build && \
+	cd build && \ 
+	#cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs -DBUILD_EXAMPLES=ON .. .. && \
+	cmake -DOPENCV_EXTRA_MODULES_PATH=/root/opencv_contrib/modules -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs -DBUILD_EXAMPLES=ON -DWITH_CUDA=ON -DWITH_V4L=ON .. && \
+	#cmake -DWITH_TBB=ON -DWITH_V4L=ON -DINSTALL_C_EXAMPLES=ON -DBUILD_EXAMPLES=ON -DWITH_QT=ON -DWITH_OPENGL=ON -DWITH_VTK=ON -DWITH_CUDA=ON ..
+	# cmake -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D BUILD_EXAMPLES=ON -D WITH_QT=ON -D WITH_OPENGL=ON -D WITH_VTK=ON -D WITH_CUDA=ON .. && \
+	make -j"$(nproc)"  && \
+	make install && \
+	ldconfig && \
+	echo 'ln /dev/null /dev/raw1394' >> ~/.bashrc
 
 # Install dependencies for Caffe
 RUN apt-get update && apt-get install -y \
@@ -141,7 +164,7 @@ RUN apt-get update && apt-get install -y \
 		libhdf5-serial-dev \
 		libleveldb-dev \
 		liblmdb-dev \
-		libopencv-dev \
+		# libopencv-dev \
 		libprotobuf-dev \
 		libsnappy-dev \
 		protobuf-compiler \
@@ -156,7 +179,7 @@ RUN apt-get update && apt-get install -y \
 RUN git clone -b ${CAFFE_VERSION} --depth 1 https://github.com/BVLC/caffe.git /root/caffe && \
 	cd /root/caffe && \
 	mkdir build && cd build && \
-	cmake -DUSE_CUDNN=1 -DBLAS=Open .. && \
+	cmake -DUSE_CUDNN=1 -DBLAS=Open -DCUDA_USE_STATIC_CUDA_RUNTIME=OFF .. && \
 	make -j"$(nproc)" all && \
 	make install
 
@@ -168,21 +191,6 @@ ENV PYTHONPATH=$PYCAFFE_ROOT:$PYTHONPATH \
 
 RUN echo "$CAFFE_ROOT/build/lib" >> /etc/ld.so.conf.d/caffe.conf && ldconfig
 
-# Install OpenCV
-# RUN git clone --depth 1 https://github.com/opencv/opencv.git /root/opencv && \
-COPY opencv-2.4.zip 2.4.13.4.zip
-# RUN wget https://github.com/opencv/opencv/archive/2.4.13.4.zip && \ 
-RUN unzip 2.4.13.4.zip && \
-	rm 2.4.13.4.zip && \
-	mv opencv-2.4.13.4 /root/opencv && \
-	cd /root/opencv && \
-	mkdir build && \
-	cd build && \
-	cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=ON cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs -DBUILD_EXAMPLES=ON .. .. && \
-	make -j"$(nproc)"  && \
-	make install && \
-	ldconfig && \
-	echo 'ln /dev/null /dev/raw1394' >> ~/.bashrc
 
 # Load mysql connectors
 COPY mysql-connector-cpp.tar.gz mysql-connector-cpp.tar.gz
